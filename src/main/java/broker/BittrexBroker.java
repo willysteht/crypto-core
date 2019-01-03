@@ -11,13 +11,18 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import enums.Interval;
-import model.brokerHelper.EncryptionUtility;
 import utils.ApikeyHelper;
-import utils.Satoshi;
+import utils.Interval;
 import utils.RestHelper;
+import utils.Satoshi;
 import utils.sound.SoundUtils;
 
+/**
+ * I found this somewhere on github but can't remember where. If the original author finds this I will gladly link to him.
+ * I made some additions/improvements. Some of the api calls are not functioning because this implementation uses mostly the 
+ * non official API version 2 of bittrex.
+ *
+ */
 public class BittrexBroker implements IBroker {
 
 	public static final String ORDER_LIMIT = "LIMIT", ORDER_MARKET = "MARKET";
@@ -42,8 +47,9 @@ public class BittrexBroker implements IBroker {
 	private RestHelper restHelper;
 
 	public BittrexBroker() {
-		String path = "C:\\sexyMoneymaker\\broker\\";
-		String file = "bittrex.txt";
+		String path = "<some file URI"; //link to the file with apikey and apisecret
+		String file = "<some file>.txt"; //apikey in first line, secret in second line
+
 		File f = new File(path + file);
 
 		String[] sa = ApikeyHelper.getApikeyAndSecret(f);
@@ -67,13 +73,11 @@ public class BittrexBroker implements IBroker {
 		return getResponse(METHOD_PUBLIC, MARKETS, "getmarketsummaries");
 	}
 
-	@Override
 	public JSONObject getTicker(String market, Interval interval) {
 		return getResponse(METHOD_PUBLIC, MARKET, "GetTicks",
 				returnCorrectMap("marketName", market, "tickInterval", interval.toString()));
 	}
 
-	@Override
 	public JSONObject getTicker(String market) {
 		this.API_VERSION = "1.1";
 		JSONObject json = getResponse("public", "", "getticker", returnCorrectMap("market", market));
@@ -81,29 +85,24 @@ public class BittrexBroker implements IBroker {
 		return json;
 	}
 
-	@Override
 	public JSONObject buy(String market, Satoshi amount, Satoshi rate) {
 		return placeNonConditionalOrder(TRADE_BUY, market, ORDER_LIMIT, amount, rate, TIMEINEFFECT_GOOD_TIL_CANCELLED);
 	}
 
-	@Override
 	public void buy(String coinTo, String coinFrom, Satoshi amount) {
 		// TODO Auto-generated method stub
 
 	}
 
-	@Override
 	public JSONObject sell(String market, Satoshi amount, Satoshi rate) {
 		return placeNonConditionalOrder(TRADE_SELL, market, ORDER_LIMIT, amount, rate, TIMEINEFFECT_GOOD_TIL_CANCELLED);
 	}
 
-	@Override
 	public void sell(String coinFrom, String coinTo, Satoshi amount) {
 		// TODO Auto-generated method stub
 
 	}
 
-	@Override
 	public JSONObject sell(String coinName, Satoshi amount, Satoshi rate, String conditionType,
 			Satoshi conditionTarget) {
 		// TODO Auto-generated method stub
@@ -125,9 +124,8 @@ public class BittrexBroker implements IBroker {
 	}
 
 	/**
-	 * See deprecated
 	 * 
-	 * @deprecated this shit is buggy on apis site
+	 * @deprecated this is buggy on apis site
 	 * @param market
 	 * @return
 	 */
@@ -176,7 +174,6 @@ public class BittrexBroker implements IBroker {
 		return getResponse(METHOD_KEY, MARKET, "getorderhistory", returnCorrectMap("marketname", market));
 	}
 
-	@Override
 	public JSONArray getBalances() { // Returns all current balances
 		//TODO make it work for v2.0
 		return removeZeroBalances(getResponse(METHOD_KEY, BALANCE, "getbalances"));
@@ -188,7 +185,6 @@ public class BittrexBroker implements IBroker {
 //		return json;
 	}
 
-	@Override
 	public JSONObject getBalance(String currency) { // Returns the balance of a specific currency
 		currency = currency.toUpperCase();
 		return getResponse(METHOD_KEY, BALANCE, "getbalance", returnCorrectMap("currencyname", currency));
@@ -334,9 +330,6 @@ public class BittrexBroker implements IBroker {
 		boolean publicRequest = true;
 
 		if (!url.substring(url.indexOf("v" + API_VERSION)).contains("/" + METHOD_PUBLIC + "/")) { // Only attach apikey
-																									// & nonce if it is
-																									// not a public
-																									// method
 			url += "apikey=" + apikey + "&nonce=" + EncryptionUtility.generateNonce();
 			publicRequest = false;
 		}
@@ -346,9 +339,6 @@ public class BittrexBroker implements IBroker {
 			HttpGet request = new HttpGet(url);
 			if (!publicRequest)
 				request.addHeader("apisign", EncryptionUtility.calculateHash(secret, url, encryptionAlgorithm)); // Attaches
-																													// signature
-																													// as
-																													// a
 																													// header
 			HttpResponse httpResponse = client.execute(request);
 
@@ -369,16 +359,13 @@ public class BittrexBroker implements IBroker {
 		}
 	}
 
-	@Override
 	public void connect() {
 		// TODO Auto-generated method stub
 
 	}
 
-	@Override
 	public void disconnect() {
 		// TODO Auto-generated method stub
-
 	}
 
 	private JSONArray removeZeroBalances(JSONObject response) {
